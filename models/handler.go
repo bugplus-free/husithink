@@ -24,7 +24,8 @@ func SayhelloName(w http.ResponseWriter, r *http.Request) {
 func Login(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("method:", r.Method) //获取请求的方法
 	if r.Method == "GET" {
-		t, _ := template.ParseFiles("login.gtpl")
+		t, _ := template.ParseFiles("views/login.gtpl")
+		// fmt.Println("这里有问题！！！")
 		log.Println(t.Execute(w, nil))
 	} else {
 		//请求的是登录数据，那么执行登录的逻辑判断

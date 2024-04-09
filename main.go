@@ -1,9 +1,9 @@
 package main
 
 import (
+	"husithink/models"
 	"log"
 	"net/http"
-	"husithink/models"
 )
 
 func main() {
