@@ -4,15 +4,16 @@ import (
 	"database/sql"
 	"fmt"
 	"testing"
-	_ "github.com/go-sql-driver/mysql"
+	"time"
+	_ "github.com/mattn/go-sqlite3"
 )
 
-func TestMysql(t *testing.T) {
-	db, err := sql.Open("mysql", "root:123456@/test?charset=utf8")
+func TestSqlite3(t *testing.T) {
+	db, err := sql.Open("sqlite3", "./foo.db")
 	checkErr(t,err)
 
 	//插入数据
-	stmt, err := db.Prepare("INSERT INTO userinfo SET username=?,department=?,created=?")
+	stmt, err := db.Prepare("INSERT INTO userinfo(username, department, created) values(?,?,?)")
 	checkErr(t,err)
 
 	res, err := stmt.Exec("astaxie", "研发部门", "2012-12-09")
@@ -21,7 +22,7 @@ func TestMysql(t *testing.T) {
 	id, err := res.LastInsertId()
 	checkErr(t,err)
 
-	fmt.Println(t,id)
+	fmt.Println(id)
 	//更新数据
 	stmt, err = db.Prepare("update userinfo set username=? where uid=?")
 	checkErr(t,err)
@@ -42,7 +43,7 @@ func TestMysql(t *testing.T) {
 		var uid int
 		var username string
 		var department string
-		var created string
+		var created time.Time
 		err = rows.Scan(&uid, &username, &department, &created)
 		checkErr(t,err)
 		fmt.Println(uid)
@@ -65,9 +66,8 @@ func TestMysql(t *testing.T) {
 
 	db.Close()
 }
-//出现重复定义了，为了测试，就注释掉了
-// func checkErr(t *testing.T,err error) {
-// 	if err != nil {
-// 		t.Errorf("出现错误")
-// 	}
-// }
+func checkErr(t *testing.T,err error) {
+	if err != nil {
+		t.Errorf("出现错误")
+	}
+}
