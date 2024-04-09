@@ -1,8 +1,16 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	"log"
+	"net/http"
+	"husithink/models"
+)
 
 func main() {
-	r := gin.Default()
-	r.POST("")
+	http.HandleFunc("/", models.SayhelloName)
+	http.HandleFunc("/login", models.Login)
+	err := http.ListenAndServe(":9999", nil)
+	if err != nil {
+		log.Fatal("ListenAndServe", err)
+	}
 }
