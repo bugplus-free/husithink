@@ -4,6 +4,8 @@ import (
 	"crypto/md5"
 	"fmt"
 	"html/template"
+	"husithink/sessions"
+	_ "husithink/sessions/memory"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,16 +15,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"husithink/sessions"
-	_ "husithink/sessions/memory"
 )
+
 var GlobalSessions *sessions.Manager
 
 func init() {
 	GlobalSessions, _ = sessions.NewManager("memory", "gosessionid", 3600)
 	go GlobalSessions.GC()
 }
-
 
 func SayhelloName(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm() //解析url传递的参数，对于POST则解析响应包的主体（request body）
@@ -58,36 +58,75 @@ func SayhelloName(w http.ResponseWriter, r *http.Request) {
 func Login(w http.ResponseWriter, r *http.Request) {
 	sess := GlobalSessions.SessionStart(w, r)
 	r.ParseForm()
-	h := md5.New()
-	salt:="astaxie%^7&8888"
-	io.WriteString(h,salt+time.Now().String())
-	token:=fmt.Sprintf("%x",h.Sum(nil))
-	if r.Form.Get("token")!=token{
-		t, _ := template.ParseFiles("views/login.gtpl")
-		w.Header().Set("Content-Type", "text/html")
-		t.Execute(w, sess.Get("username"))
-		return 
-	}
-	sess.Set("token",token)
+
 	if r.Method == "GET" {
+		h := md5.New()
+		salt := "husithink%^7&8888"
+		io.WriteString(h, salt+time.Now().String())
+		token := fmt.Sprintf("%x", h.Sum(nil))
+		
 		t, _ := template.ParseFiles("views/login.gtpl")
 		w.Header().Set("Content-Type", "text/html")
-		t.Execute(w, sess.Get("username"))
+		t.Execute(w, token)
 	} else {
 		//请求的是登录数据，那么执行登录的逻辑判断
+		// h := md5.New()
+		// salt:="husithink%^7&8888"
+		// io.WriteString(h,salt+time.Now().String())
+		// token:=fmt.Sprintf("%x",h.Sum(nil))
+		// sess.Set("token",token)
 		user := Userinfo{
 			UserName: r.Form.Get("username"),
 			Password: r.Form.Get("password"),
 		}
-		if If_In_Sqlite3(&user) {
-			fmt.Println("用户登录成功")
-			t, _ := template.ParseFiles("views/submit.gtpl")
-			w.Header().Set("Content-Type", "text/html")
-			t.Execute(w, sess.Get("username"))
+		token := r.Form.Get("token")
+		if token != "" {
+				h := md5.New()
+				salt := "husithink%^7&8888"
+				io.WriteString(h, salt+time.Now().String())
+				token_now := fmt.Sprintf("%x", h.Sum(nil))
+				
+			if token_now==token{
+				t, _ := template.ParseFiles("views/login.gtpl")
+				w.Header().Set("Content-Type", "text/html")
+				t.Execute(w, token_now)
+			}else{
+				//验证token的合法性
+				if If_In_Sqlite3(&user) {
+					fmt.Println("用户登录成功")
+					sess.Set("username", r.Form["username"])
+					t, _ := template.ParseFiles("views/submit.gtpl")
+					w.Header().Set("Content-Type", "text/html")
+					t.Execute(w, token_now)
+				} else {
+					http.Redirect(w, r, "/", 302)
+				}
+			}
+			
 		} else {
-			sess.Set("username", r.Form["username"])
-			http.Redirect(w, r, "/", 302)
+				
+				sess.Set("username", r.Form["username"])
+				t, _ := template.ParseFiles("views/submit.gtpl")
+				w.Header().Set("Content-Type", "text/html")
+				t.Execute(w, nil)
+			//不存在token报错
 		}
+
+		// user := Userinfo{
+		// 	UserName: r.Form.Get("username"),
+		// 	Password: r.Form.Get("password"),
+		// }
+		// if If_In_Sqlite3(&user) {
+		// 	fmt.Println("用户登录成功")
+		// 	t, _ := template.ParseFiles("views/submit.gtpl")
+		// 	w.Header().Set("Content-Type", "text/html")
+		// 	t.Execute(w, token)
+		// 	sess.Set("token", token)
+
+		// } else {
+		// 	sess.Set("username", r.Form["username"])
+		// 	http.Redirect(w, r, "/", 302)
+		// }
 		// }
 		fmt.Println("username length:", len(r.Form["username"][0]))
 		fmt.Println("username:", template.HTMLEscapeString(r.Form.Get("username"))) //输出到服务器端
@@ -133,6 +172,9 @@ func Enroll(w http.ResponseWriter, r *http.Request) {
 		}
 		if !If_Add_Sqlite3(&user) {
 			fmt.Println("用户已注册")
+			t, _ := template.ParseFiles("views/enroll.gtpl")
+			log.Println(t.Execute(w, nil))
+
 		} else {
 			fmt.Println("用户注册成功")
 			t, _ := template.ParseFiles("views/login.gtpl")
