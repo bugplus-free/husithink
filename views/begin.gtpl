@@ -75,6 +75,7 @@
 
     <!-- 走马灯轮播效果（仅提供基本逻辑，实际应用可能需要使用JavaScript库如Swiper实现更复杂的功能） -->
     <script>
+    
         function carousel() {
             const container = document.querySelector('.carousel-container');
             const items = container.querySelectorAll('.carousel-item');
@@ -92,6 +93,43 @@
         }
 
         document.addEventListener('DOMContentLoaded', carousel);
+
+
+
+        function generateToken(salt) {
+            const hash = new Uint8Array(16); // 创建一个16字节的Uint8Array，用于存放MD5哈希结果
+            const now = new Date().toISOString(); // 获取当前时间字符串
+
+            // 在浏览器环境中，可以使用Web Cryptography API来计算MD5哈希
+            window.crypto.subtle.digest('md5', new TextEncoder().encode(salt + now))
+                .then(hash => {
+                const token = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+                return token;
+                })
+                .catch(err => {
+                console.error('Error generating token:', err);
+                return null; // 或者抛出错误，根据您的需求处理
+                });
+            }
+
+            // 使用示例
+            generateToken("astaxie%^7&8888").then(token => {
+            // 发送请求时附带生成的token
+            fetch('/your-api-endpoint', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                'X-Token': token, // 将token放在自定义请求头中，具体名称根据您的服务端要求调整
+                },
+                body: JSON.stringify({ /* 请求体数据 */ }),
+            })
+                .then(response => {
+                // 处理响应
+                })
+                .catch(error => {
+                // 处理请求错误
+                });
+            });
     </script>
 </head>
 <body>

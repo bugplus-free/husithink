@@ -119,7 +119,6 @@
                 input.parentElement.classList.remove('has-error');
             }
         }
-
         document.addEventListener('DOMContentLoaded', () => {
             const usernameInput = document.querySelector('input[name="username"]');
             const emailInput = document.querySelector('input[name="email"]');

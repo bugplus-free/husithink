@@ -13,7 +13,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"husithink/sessions"
+	_ "husithink/sessions/memory"
 )
+var GlobalSessions *sessions.Manager
+
+func init() {
+	GlobalSessions, _ = sessions.NewManager("memory", "gosessionid", 3600)
+	go GlobalSessions.GC()
+}
+
 
 func SayhelloName(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm() //解析url传递的参数，对于POST则解析响应包的主体（request body）
@@ -47,40 +56,25 @@ func SayhelloName(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func Login(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("method:", r.Method) //获取请求的方法
-	if r.Method == "GET" {
-		timestamp := strconv.Itoa(time.Now().Nanosecond())
-		hashWr := md5.New()
-		hashWr.Write([]byte(timestamp))
-		token := fmt.Sprintf("%x", hashWr.Sum(nil))
-		//如果是请求login页的话就给他
+	sess := GlobalSessions.SessionStart(w, r)
+	r.ParseForm()
+	h := md5.New()
+	salt:="astaxie%^7&8888"
+	io.WriteString(h,salt+time.Now().String())
+	token:=fmt.Sprintf("%x",h.Sum(nil))
+	if r.Form.Get("token")!=token{
 		t, _ := template.ParseFiles("views/login.gtpl")
-		log.Println(t.Execute(w, token))
+		w.Header().Set("Content-Type", "text/html")
+		t.Execute(w, sess.Get("username"))
+		return 
+	}
+	sess.Set("token",token)
+	if r.Method == "GET" {
+		t, _ := template.ParseFiles("views/login.gtpl")
+		w.Header().Set("Content-Type", "text/html")
+		t.Execute(w, sess.Get("username"))
 	} else {
 		//请求的是登录数据，那么执行登录的逻辑判断
-		r.ParseForm()
-		token := r.Form.Get("token")
-		if token != "" {
-			//验证token的合法性
-		} else {
-			//不存在token报错
-		}
-		// flag := true
-		// if m, _ := regexp.MatchString("^[a-zA-Z]+$", r.Form.Get("username")); !m {
-		// 	flag = false
-		// }
-		// // if m, _ := regexp.MatchString(`^([\w\.\_]{2,10})@(\w{1,})\.([a-z]{2,4})$`, r.Form.Get("email")); !m {
-		// // 	flag = false
-		// // }
-		// // if m, _ := regexp.MatchString(`^$`, r.Form.Get("password")); !m {
-		// // 	flag = false
-		// // }
-		// if m, _ := regexp.MatchString(`^[0-9a-zA-Z]{8,16}$`, r.Form.Get("password")); !m {
-		// 	flag = false
-		// }
-		// if !flag {
-		// 	fmt.Fprintf(w,"用户名密码有误") //对于错误进行笼统的概括，留坑
-		// } else {
 		user := Userinfo{
 			UserName: r.Form.Get("username"),
 			Password: r.Form.Get("password"),
@@ -88,10 +82,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		if If_In_Sqlite3(&user) {
 			fmt.Println("用户登录成功")
 			t, _ := template.ParseFiles("views/submit.gtpl")
-			log.Println(t.Execute(w, nil))
+			w.Header().Set("Content-Type", "text/html")
+			t.Execute(w, sess.Get("username"))
 		} else {
-			fmt.Println("用户登录失败")
-			fmt.Fprintf(w, "该账号不存在")
+			sess.Set("username", r.Form["username"])
+			http.Redirect(w, r, "/", 302)
 		}
 		// }
 		fmt.Println("username length:", len(r.Form["username"][0]))
@@ -131,22 +126,6 @@ func Enroll(w http.ResponseWriter, r *http.Request) {
 		} else {
 			//不存在token报错
 		}
-		// flag := true
-		// if m, _ := regexp.MatchString("^[a-zA-Z]+$", r.Form.Get("username")); !m {
-		// 	flag = false
-		// }
-		// if m, _ := regexp.MatchString(`^([\w\.\_]{2,10})@(\w{1,})\.([a-z]{2,4})$`, r.Form.Get("email")); !m {
-		// 	flag = false
-		// }
-		// // if m, _ := regexp.MatchString(`^$`, r.Form.Get("password")); !m {
-		// // 	flag = false
-		// // }
-		// if m, _ := regexp.MatchString(`^[0-9a-zA-Z]{8,16}$`, r.Form.Get("password")); !m {
-		// 	flag = false
-		// }
-		// if !flag {
-		// 	fmt.Fprintf(w,"用户名、邮箱、密码不符合格式") //对于错误进行笼统的概括，留坑
-		// } else {
 		user := Userinfo{
 			UserName: r.Form.Get("username"),
 			Email:    r.Form.Get("email"),
@@ -193,6 +172,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 		io.Copy(f, file)
 	}
 }
+
 // 示例函数：根据文件名推断MIME类型
 func getContentTypeFromFileName(fileName string) string {
 	ext := strings.ToLower(filepath.Ext(fileName))
@@ -211,7 +191,7 @@ func getContentTypeFromFileName(fileName string) string {
 func ServeImage(w http.ResponseWriter, r *http.Request) {
 	// 获取请求URL的路径
 	urlPath := r.URL.Path
-	
+
 	// 提取URL路径的最后一段（图片文件名）
 	fileName := filepath.Base(urlPath)
 
@@ -235,4 +215,17 @@ func ServeImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Failed to write image data: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func Count(w http.ResponseWriter, r *http.Request) {
+	sess := GlobalSessions.SessionStart(w, r)
+	ct := sess.Get("countnum")
+	if ct == nil {
+		sess.Set("countnum", 1)
+	} else {
+		sess.Set("countnum", (ct.(int) + 1))
+	}
+	t, _ := template.ParseFiles("views/count.gtpl")
+	w.Header().Set("Content-Type", "text/html")
+	t.Execute(w, sess.Get("countnum"))
 }

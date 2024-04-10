@@ -113,7 +113,6 @@
                 input.setCustomValidity('');
             }
         }
-
         document.addEventListener('DOMContentLoaded', () => {
             const usernameInput = document.querySelector('input[name="username"]');
             const passwordInput = document.querySelector('input[name="password"]');
@@ -126,12 +125,17 @@
                 validateInput(passwordInput, validatePassword, '密码必须是8到16位的英文大小写字母和数字组合');
             });
         });
+
+        
+
+        // 使用示例
+        
     </script>
 </head>
 <body>
     <div class="container">
         <h1>欢迎登录</h1>
-        <form action="/login" method="post">
+        <form action="/login" method="post" id="login-form">
             <div class="input-group">
                 <input type="text" name="username" placeholder="用户名" required>
             </div>
