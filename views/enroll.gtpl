@@ -104,19 +104,15 @@
 
         function validatePassword(input) {
             const regex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+            
             return regex.test(input.value);
         }
-
         function validateInput(input, validator, errorMessage) {
             const isValid = validator(input);
-            const errorElement = input.nextElementSibling;
-
             if (!isValid) {
-                errorElement.textContent = errorMessage;
-                input.parentElement.classList.add('has-error');
+                input.setCustomValidity(errorMessage);
             } else {
-                errorElement.textContent = '';
-                input.parentElement.classList.remove('has-error');
+                input.setCustomValidity('');
             }
         }
 

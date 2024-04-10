@@ -20,15 +20,7 @@ func init() {
 
 	// 设置默认数据库
 	//数据库存放位置：./datas/husi_user.db ， 数据库别名：default
-	orm.RegisterDataBase("default", "sqlite3", "./datas/husi_user.db")
-	//注册表
-	orm.RegisterModel(new(Userinfo))
-	orm.SetMaxIdleConns("default", 50) //最大空闲连接
-	orm.SetMaxOpenConns("default", 40) //最大数据库连接数
-	orm.Debug = true
-	o := orm.NewOrm()
-	DB = o
-	orm.RunSyncdb("default", false, true)  
+	
 }
 
 // 目前实现注册功能中的用户名是否在数据库中，因为用户名是主键唯一，如果存在，返回false,不在就插入并且返回true
@@ -61,4 +53,17 @@ func If_Add_Sqlite3(user *Userinfo) bool {
 	} else {
 		return false
 	}
+}
+func init(){
+	orm.RegisterDataBase("default", "sqlite3", "./datas/husi_user.db")
+	//注册表
+	orm.RegisterModel(new(Userinfo))
+	orm.SetMaxIdleConns("default", 50) //最大空闲连接
+	orm.SetMaxOpenConns("default", 40) //最大数据库连接数
+	orm.Debug = true
+	o := orm.NewOrm()
+	DB = o
+	orm.RunSyncdb("default", false, true)
+
+	
 }
