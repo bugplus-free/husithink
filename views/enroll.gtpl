@@ -3,7 +3,7 @@
     <title></title>
     </head>
     <body>
-        <form action="/login" method="get">
+        <form action="/enroll" method="post">
         	用户名:<input type="text" name="username">
             邮箱:<input type="text" name="email">
             密码:<input type="password" name="password">

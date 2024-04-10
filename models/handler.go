@@ -51,22 +51,35 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		if m, _ := regexp.MatchString("^[a-zA-Z]+$", r.Form.Get("username")); !m {
 			flag = false
 		}
-		if m, _ := regexp.MatchString(`^([\w\.\_]{2,10})@(\w{1,})\.([a-z]{2,4})$`, r.Form.Get("email")); !m {
-			flag = false
-		}
-		if m, _ := regexp.MatchString(`^(?![0-9a-zA-Z]+$)(?![a-zA-Z!@#$%^&*]+$)(?![0-9!@#$%^&*]+$)[0-9A-Za-z!@#$%^&*]{8,16}$`, r.Form.Get("password")); !m {
+		// if m, _ := regexp.MatchString(`^([\w\.\_]{2,10})@(\w{1,})\.([a-z]{2,4})$`, r.Form.Get("email")); !m {
+		// 	flag = false
+		// }
+		// if m, _ := regexp.MatchString(`^$`, r.Form.Get("password")); !m {
+		// 	flag = false
+		// }
+		if m, _ := regexp.MatchString(`^[0-9a-zA-Z]{8,16}$`, r.Form.Get("password")); !m {
 			flag = false
 		}
 		if !flag {
-			fmt.Fprintf(w, "error") //对于错误进行笼统的概括，留坑
+			fmt.Fprintf(w,"用户名密码有误") //对于错误进行笼统的概括，留坑
 		} else {
-			t, _ := template.ParseFiles("views/submit.gtpl")
-			log.Println(t.Execute(w, nil))
+			user:=Userinfo{
+				UserName: r.Form.Get("username"),
+				Password: r.Form.Get("password"),
+			}
+			if If_In_Sqlite3(&user){
+				fmt.Println("用户登录成功")
+				t, _ := template.ParseFiles("views/submit.gtpl")
+				log.Println(t.Execute(w, nil))
+			}else{
+				fmt.Println("用户登录失败")
+				fmt.Fprintf(w,"该账号不存在")
+			}
 		}
 		fmt.Println("username length:", len(r.Form["username"][0]))
 		fmt.Println("username:", template.HTMLEscapeString(r.Form.Get("username"))) //输出到服务器端
 		fmt.Println("password:", template.HTMLEscapeString(r.Form.Get("password")))
-		template.HTMLEscape(w, []byte(r.Form.Get("username"))) //输出到客户端
+		// template.HTMLEscape(w, []byte(r.Form.Get("username"))) //输出到客户端
 	}
 }
 func Submit(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +107,43 @@ func Enroll(w http.ResponseWriter, r *http.Request) {
 	} else {
 		//请求的是登录数据，那么执行登录的逻辑判断
 		r.ParseForm()
+		token := r.Form.Get("token")
+		if token != "" {
+			//验证token的合法性
+		} else {
+			//不存在token报错
+		}
+		flag := true
+		if m, _ := regexp.MatchString("^[a-zA-Z]+$", r.Form.Get("username")); !m {
+			flag = false
+		}
+		if m, _ := regexp.MatchString(`^([\w\.\_]{2,10})@(\w{1,})\.([a-z]{2,4})$`, r.Form.Get("email")); !m {
+			flag = false
+		}
+		// if m, _ := regexp.MatchString(`^$`, r.Form.Get("password")); !m {
+		// 	flag = false
+		// }
+		if m, _ := regexp.MatchString(`^[0-9a-zA-Z]{8,16}$`, r.Form.Get("password")); !m {
+			flag = false
+		}
+		if !flag {
+			fmt.Fprintf(w,"用户名、邮箱、密码不符合格式") //对于错误进行笼统的概括，留坑
+		} else {
+			user:=Userinfo{
+				UserName: r.Form.Get("username"),
+				Email: r.Form.Get("email"),
+				Password: r.Form.Get("password"),
+			}
+			if !If_Add_Sqlite3(&user){
+				fmt.Println("用户已注册")
+			}else{
+				fmt.Println("用户注册成功")
+				t, _ := template.ParseFiles("views/login.gtpl")
+				log.Println(t.Execute(w, token))
+			}
+		}
 		fmt.Println("username:", r.Form["username"])
+		fmt.Println("email:", r.Form["email"])
 		fmt.Println("password:", r.Form["password"])
 	}
 }
@@ -109,7 +158,7 @@ func Upload(w http.ResponseWriter, r *http.Request) {
 		t, _ := template.ParseFiles("upload.gtpl")
 		t.Execute(w, token)
 	} else {
-		r.ParseMultipartForm(32 << 20)//开一个内存空间出来
+		r.ParseMultipartForm(32 << 20) //开一个内存空间出来
 		file, handler, err := r.FormFile("uploadfile")
 		if err != nil {
 			fmt.Println(err)

@@ -3,7 +3,7 @@
     <title></title>
     </head>
     <body>
-        <form action="/submit" method="get">
+        <form action="/login" method="post">
         	用户名:<input type="text" name="username">
         	密码:<input type="password" name="password">
             <input type="hidden" name="token" value="{{.}}">
